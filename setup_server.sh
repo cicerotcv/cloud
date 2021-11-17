@@ -1,7 +1,7 @@
 #!/bin/bash
 
-NPM_GLOBAL_DIR="$HOME/.npm-global"
-SERVER_DIR="$HOME/server"
+NPM_GLOBAL_DIR="/home/$(whoami)/.npm-global"
+SERVER_DIR="/home/$(whoami)/server"
 API_DIR="$SERVER_DIR/api"
 NODE_DEV_PORT=3333
 NODE_PROD_PORT=8080
@@ -17,7 +17,9 @@ sudo apt-get install -y nodejs
 if [[ -d $NPM_GLOBAL_DIR  && $(npm get prefix) == $NPM_GLOBAL_DIR ]]; then
   echo "NPM_GLOBAL_DIR already set as $NPM_GLOBAL_DIR"
 else
+  echo ""
   echo "Setting NPM_GLOBAL_DIR as $NPM_GLOBAL_DIR";
+  echo ""
   mkdir $NPM_GLOBAL_DIR
   npm config set prefix "$NPM_GLOBAL_DIR" 
 fi
