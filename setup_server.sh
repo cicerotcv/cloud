@@ -2,7 +2,6 @@
 
 NPM_GLOBAL_DIR="/home/ubuntu/.npm-global"
 SERVER_DIR="/home/ubuntu/server"
-API_DIR="$SERVER_DIR/api"
 NODE_DEV_PORT=3333
 NODE_PROD_PORT=8080
 
@@ -31,10 +30,10 @@ if [ -d "$SERVER_DIR" ]; then
     git pull
 else
     echo $'\nCloning repository\n'
-    git clone https://github.com/cicerotcv/cloud.git $SERVER_DIR
+    git clone https://github.com/cicerotcv/cloud-server $SERVER_DIR
 fi
 
-cd $API_DIR
+cd $SERVER_DIR
 
 # se a porta estiver em uso, 
 # finaliza o serviço que está utilizando 
