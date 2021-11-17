@@ -9,7 +9,7 @@ switch (process.env.NODE_ENV) {
     break;
   case "production":
     console.log("Loaded production enviroment configs");
-    path = `${__dirname}/../.env`;
+    path = `${__dirname}/../.env.production`;
     break;
   default:
     console.log("Loaded default enviroment configs");

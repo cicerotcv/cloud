@@ -7,10 +7,14 @@ cd ./server/api
 echo "PORT=8080" > .env.development
 echo "PORT=3334" > .env.production
 
-echo ""
+echo $'\nInstalling dependencies\n'
 
 npm install
 
-echo ""
+echo $'\nBuilding application\n'
 
-NODE_ENV="development" npm run dev
+npm run build
+
+echo $'\Running application\n'
+
+NODE_ENV="production" npm start
