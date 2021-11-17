@@ -4,6 +4,8 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
+    "start": "node dist",
+    "build": "npx tsc --project . --outDir dist",
     "dev": "ts-node-dev --transpile-only --ignore-watch node_modules src/index.ts",
     "prettier:check": "./node_modules/.bin/prettier --check ./src",
     "prettier:write": "./node_modules/.bin/prettier --write ./src"

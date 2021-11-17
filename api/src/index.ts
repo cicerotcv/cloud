@@ -6,10 +6,14 @@ import helmet from "helmet";
 
 const app = express();
 
-app.use(logger("dev"));
+app.use(logger("common"));
 app.use(helmet());
 app.use(express.json());
-// app.use(router);
+
+app.use("/", (req, res) => {
+  // console.log(JSON.stringify(req.headers, null, 2));
+  return res.json({ message: "hello world" });
+});
 
 app.listen(process.env.PORT, () => {
   console.log(`Server running at PORT: ${process.env.PORT}`);
