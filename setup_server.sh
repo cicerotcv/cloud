@@ -1,7 +1,7 @@
 #!/bin/bash
 
-NPM_GLOBAL_DIR="/home/$(whoami)/.npm-global"
-SERVER_DIR="/home/$(whoami)/server"
+NPM_GLOBAL_DIR="/home/ubuntu/.npm-global"
+SERVER_DIR="/home/ubuntu/server"
 API_DIR="$SERVER_DIR/api"
 NODE_DEV_PORT=3333
 NODE_PROD_PORT=8080
