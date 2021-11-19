@@ -43,7 +43,6 @@ def create_ec2_instance(instance_config: dict = {}, UserData: str = None):
 #         GroupName='SSH-ONLY', Description='only allow SSH traffic')
 #     securitygroup.authorize_ingress(
 #         CidrIp='0.0.0.0/0', IpProtocol='tcp', FromPort=22, ToPort=22)
-
 # def load_instance_settings(config_file: str = "config.json") -> str:
 #     config = load_file(config_file)
 #     instance_settings = json.loads(config)
@@ -53,7 +52,6 @@ def create_ec2_instance(instance_config: dict = {}, UserData: str = None):
 #     user_data = load_file("setup_server.sh")
 #     print(f"config: {settings}")
 #     # create_ec2_instance(instance_config=settings, UserData=user_data)
-
 if __name__ == "__main__":
     # Controller.Logger.enable_colors = False
 

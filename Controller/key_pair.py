@@ -1,5 +1,5 @@
 
-from .Logger import logger as console
+from .logger import logger as console
 from .utils import save_file, delete_file, save_file
 from .utils import attr_guard, client_guard
 import json
