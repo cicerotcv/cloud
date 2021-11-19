@@ -15,9 +15,7 @@ class Config(CustomBaseModel):
 
 
 class Secret(CustomBaseModel):
-    # AWS_ACCESS_KEY_ID: str
     aws_access_key_id: str
-    # AWS_SECRET_ACCESS_KEY: str
     aws_secret_access_key: str
 
     def __str__(self):
@@ -29,7 +27,6 @@ class Secret(CustomBaseModel):
 
 
 class Environment(CustomBaseModel):
-    # REGION_NAME: str
     secret: Secret
     config: Config
 

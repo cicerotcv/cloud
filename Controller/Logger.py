@@ -18,6 +18,12 @@ class Logger:
             print(content)
 
     def info(self, content: str):
+        self.__colored(content, self.__BLUE)
+
+    def success(self, content: str):
+        self.__colored(content, self.__CYAN)
+
+    def warn(self, content: str):
         self.__colored(content, self.__YELLOW)
 
     def log(self, content: str):
@@ -38,8 +44,7 @@ if __name__ == "__main__":
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+    print()
     for i, color in enumerate(colors):
         print(f'{color}{str(i).zfill(2)} default style{ENDC}')
-        print(f'{color}{UNDERLINE}{str(i).zfill(2)} underline style{ENDC}')
-
-    print(logger.__dict__['__ENDC'])
+        print(f'{color}{UNDERLINE}{str(i).zfill(2)} underline style{ENDC}\n')
