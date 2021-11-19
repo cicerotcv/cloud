@@ -1,3 +1,3 @@
-from .environment import Environment
-from .logger import logger as console
-from .keyPair import KeyPair
+from controller.key_pair import KeyPair
+from controller.environment import Environment
+from controller.logger import Logger

@@ -1,9 +1,9 @@
-
-from .logger import logger as console
-from .utils import save_file, delete_file, save_file
-from .utils import attr_guard, client_guard
 import json
 
+from .logger import Logger
+from .utils import attr_guard, client_guard, delete_file, save_file
+
+console = Logger()
 
 class KeyPair():
     KeyName: str = None
@@ -65,12 +65,3 @@ class KeyPair():
         dumped = json.dumps(this_key, indent=2)
         console.info(f'\n{dumped}\n')
         return this_key
-
-
-if __name__ == "__main__":
-    from .Environment import Environment
-    import boto3
-    env = Environment()
-
-    ec2_params = {**env.config.dict(), **env.secret.dict()}
-    client = boto3.client('ec2', **ec2_params)

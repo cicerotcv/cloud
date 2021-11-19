@@ -37,9 +37,9 @@ class Environment(CustomBaseModel):
         super().__init__(secret=secret, config=config)
 
 
-if __name__ == "__main__":
-    env = Environment()
-    print(env.dict())
-    print(env.secret)
-    print(env.secret.aws_access_key_id)
-    print(env.config)
+# if __name__ == "__main__":
+#     env = Environment()
+#     print(env.dict())
+#     print(env.secret)
+#     print(env.secret.aws_access_key_id)
+#     print(env.config)

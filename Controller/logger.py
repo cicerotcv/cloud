@@ -1,50 +1,62 @@
-enable_colors = True
+from typing import Literal
 
 
-class Logger:
+class Colors:
     __PINK = '\033[95m'
     __BLUE = '\033[94m'
     __CYAN = '\033[96m'
     __GREEN = '\033[92m'
     __YELLOW = '\033[93m'
     __RED = '\033[91m'
-    __ENDC = '\033[0m'
     __UNDERLINE = '\033[4m'
+    __ENDC = '\033[0m'
 
-    def __colored(self, content: str, color: str):
+    def __apply_color(self, content: str, color: Literal):
+        return f"{color}{content}{self.__ENDC}"
+
+    def pink(self, content: str):
+        return self.__apply_color(content, self.__PINK)
+
+    def blue(self, content: str):
+        return self.__apply_color(content, self.__BLUE)
+
+    def cyan(self, content: str):
+        return self.__apply_color(content, self.__CYAN)
+
+    def green(self, content: str):
+        return self.__apply_color(content, self.__GREEN)
+
+    def yellow(self, content: str):
+        return self.__apply_color(content, self.__YELLOW)
+
+    def red(self, content: str):
+        return self.__apply_color(content, self.__RED)
+
+    def underline(self, content: str):
+        return self.__apply_color(content, self.__UNDERLINE)
+
+
+class Logger:
+    def __init__(self, enable_colors=True):
+        self.__colors = Colors()
         if enable_colors:
-            print(f"{color}{content}{self.__ENDC}")
+            self.__print_function__ = lambda content, apply_color: print(
+                apply_color(content))
         else:
-            print(content)
+            self.__print_function__ = lambda content, apply_color: print(
+                content)
 
-    def info(self, content: str):
-        self.__colored(content, self.__BLUE)
+    def info(self, content: str):  # blue
+        self.__print_function__(content, self.__colors.blue)
 
-    def success(self, content: str):
-        self.__colored(content, self.__CYAN)
+    def success(self, content: str):  # cyan
+        self.__print_function__(content, self.__colors.cyan)
 
-    def warn(self, content: str):
-        self.__colored(content, self.__YELLOW)
+    def warn(self, content: str):  # yellow
+        self.__print_function__(content, self.__colors.yellow)
 
-    def log(self, content: str):
-        self.__colored(content, self.__GREEN)
+    def log(self, content: str):  # green
+        self.__print_function__(content, self.__colors.green)
 
-    def error(self, content: str):
-        self.__colored(content, self.__RED)
-
-
-logger = Logger()
-
-
-if __name__ == "__main__":
-    colors = ['\033[95m', '\033[94m', '\033[96m', '\033[92m',
-              '\033[93m', '\033[91m']
-
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-    print()
-    for i, color in enumerate(colors):
-        print(f'{color}{str(i).zfill(2)} default style{ENDC}')
-        print(f'{color}{UNDERLINE}{str(i).zfill(2)} underline style{ENDC}\n')
+    def error(self, content: str):  # red
+        self.__print_function__(content, self.__colors.red)

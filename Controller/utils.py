@@ -4,7 +4,9 @@ import traceback
 from typing import Callable, List
 from botocore import exceptions
 
-from .logger import logger as console
+from .logger import Logger
+
+console = Logger()
 
 
 def hide(string: str, digits: int = 10) -> str:

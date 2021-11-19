@@ -3,19 +3,17 @@ from time import sleep
 
 import boto3
 
-from Controller import Environment
+from controller import Environment
 
 # def signal_handler(sig, frame):
 #     print(strsignal(sig))
 #     exit(0)
-env = Environment()
-
-ec2_params = {**env.config.dict(), **env.secret.dict()}
-client = boto3.client('ec2', **ec2_params)
-
-
 # signal.signal(signal.SIGINT, signal_handler)
 # signal.signal(signal.SIGTERM, signal_handler)
+
+env = Environment()
+ec2_params = {**env.config.dict(), **env.secret.dict()}
+client = boto3.client('ec2', **ec2_params)
 
 
 def create_ec2_instance(instance_config: dict = {}, UserData: str = None):
@@ -52,16 +50,6 @@ def create_ec2_instance(instance_config: dict = {}, UserData: str = None):
 #     user_data = load_file("setup_server.sh")
 #     print(f"config: {settings}")
 #     # create_ec2_instance(instance_config=settings, UserData=user_data)
+
 if __name__ == "__main__":
-    # Controller.Logger.enable_colors = False
-
-    # keypair = KeyPair(client, debug=False)
-
-    # keypair.create('TestBoto3')
-    sleep(3)
-
-    # keypair.describe()
-    # sleep(3)
-
-    # keypair.delete()
-    sleep(3)
+    pass
