@@ -1,7 +1,12 @@
 import os
+import random
+import re
+import string
 import sys
 import traceback
+import unicodedata
 from typing import Callable, List
+
 from botocore import exceptions
 
 from .logger import Logger
@@ -29,6 +34,27 @@ def delete_file(path: str):
         os.remove(path)
     except FileNotFoundError as e:
         console.warn(f"File '{path}' not found. Probably deleted or moved")
+
+
+def random_str(length: int = 6):
+    lower = string.ascii_lowercase
+    digits = string.digits
+    options = lower + digits
+    return ''.join((random.choice(options)) for _ in range(length))
+
+
+def slugify(value):
+    """
+    Converts to lowercase, removes non-word characters (alphanumerics and
+    underscores) and converts spaces to hyphens. Also strips leading and
+    trailing whitespace.
+
+    source: https://stackoverflow.com/a/27264385
+    """
+    value = unicodedata.normalize('NFKD', value).encode(
+        'ascii', 'ignore').decode('ascii')
+    value = re.sub('[^\w\s-]', '', value).strip().lower()
+    return re.sub('[-\s]+', '-', value).strip('-')
 
 
 def full_stack():

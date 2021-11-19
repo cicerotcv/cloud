@@ -10,7 +10,7 @@ class CustomBaseModel(BaseModel):
                             for key, value in data.items()})
 
 
-class Config(CustomBaseModel):
+class Settings(CustomBaseModel):
     region_name: str
 
 
@@ -23,18 +23,18 @@ class Secret(CustomBaseModel):
         return ' '.join([f'{key}={hide(value)}' for key, value in self.dict().items()])
 
     def __repr__(self) -> str:
-        return f"Secret({self.__str__()}"
+        return f"Secret({self.__str__()})"
 
 
 class Environment(CustomBaseModel):
     secret: Secret
-    config: Config
+    settings: Settings
 
     def __init__(self):
         data = dict(dotenv_values())
-        config = Config(**data)
+        settings = Settings(**data)
         secret = Secret(**data)
-        super().__init__(secret=secret, config=config)
+        super().__init__(secret=secret, settings=settings)
 
 
 # if __name__ == "__main__":

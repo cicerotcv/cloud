@@ -5,6 +5,7 @@ from .utils import attr_guard, client_guard, delete_file, save_file
 
 console = Logger()
 
+
 class KeyPair():
     KeyName: str = None
     ResponseMetadata: dict = None
@@ -14,6 +15,9 @@ class KeyPair():
     def __init__(self, client, debug=False) -> None:
         self._client = client
         self._debug = debug
+
+    def __repr__(self) -> str:
+        return str(json.dumps({key: value for key, value in self.__dict__.items() if not key.startswith('_')}))
 
     @client_guard
     def create(self, KeyName: str):
@@ -47,7 +51,7 @@ class KeyPair():
         delete_file(f"{self.KeyName}.key")
         delete_file(f"{self.KeyName}.key.json")
 
-        console.warn(
+        console.success(
             f"KeyPair '{self.KeyName}' with KeyPairId='{self.KeyPairId}' deleted.")
 
         self.__dict__ = {}
