@@ -39,7 +39,7 @@ class Client():
 
     def describe_instances(self):
         response = self.boto3_client.describe_instances()
-        save_file('instance_description.json', json.dumps(response, indent=2, default=str), ephemeral=True)
+        save_file('instance_description.json', json.dumps(response, indent=2, default=str), ephemeral=False)
 
 
     def terminate_instance(self, instance_id):

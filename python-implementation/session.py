@@ -84,7 +84,6 @@ if __name__ == "__main__":
         webserver.describe_instances()
 
         console.info("Waiting for KeyboardInterrupt to exit")
+
         while True:
             sleep(30)
-        # for instance in webserver.instances:
-        #     webserver.terminate_instance(instance.InstanceId)
