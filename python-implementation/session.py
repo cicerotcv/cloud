@@ -53,8 +53,7 @@ class Session():
     def wipe(self):
         for client_name, client in self._clients.items():
             console.info(f"Wiping client with name '{client_name}'")
-            for instance in client.instances:
-                client.terminate_instance(instance.InstanceId)
+            client.terminate_instances()
             client.key_pair.delete()
 
 
@@ -80,10 +79,10 @@ if __name__ == "__main__":
         key_pair = webserver.create_key_pair('webserver')
 
         ec2_instance = webserver.create_instance()
-        sleep(5)
-        webserver.describe_instances()
-
-        console.info("Waiting for KeyboardInterrupt to exit")
 
         while True:
+            print()
+            webserver.describe_instances()
+            print()
+            console.info("Waiting for KeyboardInterrupt to exit")
             sleep(30)

@@ -30,22 +30,34 @@ class Client():
             UserData=UserData,
             DryRun=self._debug
         )
-        instance = InstanceSchema(**response['Instances'][0])
-        instance_response = response["Instances"][0]
-        save_file('instance_response.json', json.dumps(instance_response, indent=2, default=str), ephemeral=True)
+        instance = InstanceSchema(**response['Instances'][0], ReservationId=response["ReservationId"])
+        save_file('instance_response.json', json.dumps(instance.dict(), indent=2, default=str), ephemeral=True)
         self.instances.append(instance)
         return instance
 
 
     def describe_instances(self):
         response = self.boto3_client.describe_instances()
-        save_file('instance_description.json', json.dumps(response, indent=2, default=str), ephemeral=False)
+        save_file('instance_description.json', json.dumps(response, indent=2, default=str), ephemeral=True)
+        reservationIds = [instance.ReservationId for instance in self.instances]
+        allocated_reservations = [ reservation for reservation in response['Reservations'] 
+                                   if reservation["ReservationId"] in reservationIds ]
+        instances:List[InstanceSchema] = []
+        for reservation in allocated_reservations:
+            instances += [ InstanceSchema(**instance) for instance in reservation["Instances"]]
+        
+        for instance in instances:
+            print()
+            console.log(f'  InstanceId: {instance.InstanceId} => {instance.State.Name}')
+            if (instance.PublicIpAddress):
+                console.log(f"  $ ssh -i ./tmp/{instance.KeyName}.key ubuntu@{instance.PublicIpAddress}")
 
 
-    def terminate_instance(self, instance_id):
-        console.info("Terminating instance")
+    def terminate_instances(self):
         try:
-            response = self.boto3_client.terminate_instances(InstanceIds=[instance_id])
+            instanceIds = [instance.InstanceId for instance in self.instances]
+            console.info(f"Terminating instances: {instanceIds}")
+            response = self.boto3_client.terminate_instances(InstanceIds=instanceIds)
             save_file('terminating_instance.json', json.dumps(response, indent=2, default=str), ephemeral=True)
         except Exception as e:
             console.error(e)
