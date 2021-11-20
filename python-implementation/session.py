@@ -69,6 +69,7 @@ class ContextManager():
         console.success("Successfully exiting context manager")
         self.session.wipe()
         wipe_files()
+        return type is KeyboardInterrupt
 
 
 if __name__ == "__main__":
@@ -82,5 +83,8 @@ if __name__ == "__main__":
         sleep(5)
         webserver.describe_instances()
 
+        console.info("Waiting for KeyboardInterrupt to exit")
+        while True:
+            sleep(30)
         # for instance in webserver.instances:
         #     webserver.terminate_instance(instance.InstanceId)
