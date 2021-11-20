@@ -1,0 +1,12 @@
+{
+  "webserver": {
+    "client_type": "ec2",
+    "region_name": "us-east-1",
+    "instance_config": {
+      "ImageId": "ami-0279c3b3186e54acd",
+      "MinCount": 1,
+      "MaxCount": 1,
+      "InstanceType": "t2.micro"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+.env*
+!.env.example
+
+*/__pycache__
+*.key
+*.key.json
+tmp/
