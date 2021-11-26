@@ -23,36 +23,37 @@ if __name__ == "__main__":
 
         ohio_manager = ohio.init_client('ohio')
 
-        db_initializer = replace(fs.read('setub_database.sh'), credentials)
+        db_initializer = replace(fs.read('setup_database.sh'), credentials)
 
         database = ohio.create_instance(db_initializer)
 
-        n_virginia = session.load_region('n_virginia')
+        # n_virginia = session.load_region('n_virginia')
 
-        # creating key pair
-        nv_kp = n_virginia.create_key_pair('nv-kp')
+        # # creating key pair
+        # nv_kp = n_virginia.create_key_pair('nv-kp')
 
-        # creating security group in North Virginia
-        nv_sg = n_virginia.init_security_group("nv-sg", "::North Virginia::")
-        nv_sg.enable_ingress('ssh', 'http')
-        nv_sg.enable_egress('http', 'software_update')
-        nv_sg.create()
+        # # creating security group in North Virginia
+        # nv_sg = n_virginia.init_security_group("nv-sg", "::North Virginia::")
+        # nv_sg.enable_ingress('ssh', 'http')
+        # nv_sg.enable_egress('http', 'software_update')
+        # nv_sg.create()
 
-        north_virginia = n_virginia.init_client('north-virginia')
-        ws_initializer = replace(fs.read('setup_server.sh'), credentials)
+        # north_virginia = n_virginia.init_client('north-virginia')
+        # ws_initializer = replace(fs.read('setup_server.sh'), credentials)
 
-        webserver = n_virginia.create_instance(ws_initializer)
+        # webserver = n_virginia.create_instance(ws_initializer)
 
-        # north_virginia.create_image(webserver.InstanceId, "ami-webserver")
+        # # north_virginia.create_image(webserver.InstanceId, "ami-webserver")
 
-        north_virginia.wait_until_running(InstanceIds=[webserver.InstanceId])
+        # north_virginia.wait_until_running(InstanceIds=[webserver.InstanceId])
         ohio_manager.wait_until_running(InstanceIds=[database.InstanceId])
 
         ohio_manager.refresh()
-        north_virginia.refresh()
+        # north_virginia.refresh()
 
         while True:
-            instances = ohio.get_instances() + n_virginia.get_instances()
+            instances = ohio.get_instances() 
+            # + n_virginia.get_instances()
             for instance in instances:
                 print_status(instance)
                 print_public_ip(instance)

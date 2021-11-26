@@ -3,10 +3,14 @@
 NPM_GLOBAL_DIR="/home/ubuntu/.npm-global"
 SERVER_DIR="/home/ubuntu/server"
 
-NODE_DEV_PORT=3333
-NODE_PROD_PORT=8080
-MONGO_ADMIN_USER=${MONGO_ADMIN_USER}
-MONGO_ADMIN_PWD=${MONGO_ADMIN_PWD}
+NODE_PORT=8080
+NODE_SECRET=${NODE_SECRET}
+
+MONGO_PORT=27017
+MONGO_USER=${MONGO_USER}
+MONGO_PWD=${MONGO_PWD}
+MONGO_HOST=${MONGO_HOST}
+MONGO_DB=${MONGO_DB}
 
 sudo apt update && sudo apt upgrade -y
 sudo apt install build-essential -y
@@ -40,13 +44,20 @@ cd $SERVER_DIR
 
 # se a porta estiver em uso,
 # finaliza o serviço que está utilizando
-if [[ $(sudo lsof -t -i:$NODE_PROD_PORT) != "" ]]; then
-    sudo kill -9 $(sudo lsof -t -i:$NODE_PROD_PORT)
+if [[ $(sudo lsof -t -i:$NODE_PORT) != "" ]]; then
+    sudo kill -9 $(sudo lsof -t -i:$NODE_PORT)
 fi
 
-echo "PORT=$NODE_PROD_PORT" > .env
-echo "MONGO_ADMIN_USER=$MONGO_ADMIN_USER" >> .env
-echo "MONGO_ADMIN_USER=$MONGO_ADMIN_PWD" >> .env
+# set node server credentials
+echo "NODE_PORT=$NODE_PORT" >> .env
+echo "NODE_SECRET=$NODE_SECRET" >> .env
+
+# set mongo db related env. variables
+echo "MONGO_PORT=$MONGO_PORT" >> .env
+echo "MONGO_USER=$MONGO_USER" >> .env
+echo "MONGO_PWD=$MONGO_PWD" >> .env
+echo "MONGO_HOST=$MONGO_HOST" >> .env
+echo "MONGO_DB=$MONGO_DB" >> .env
 
 echo $'\nInstalling dependencies\n'
 
