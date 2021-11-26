@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
         ohio_manager = ohio.init_client('ohio')
 
-        db_initializer = replace(fs.read('db_install.sh'), credentials)
+        db_initializer = replace(fs.read('setub_database.sh'), credentials)
 
         database = ohio.create_instance(db_initializer)
 
