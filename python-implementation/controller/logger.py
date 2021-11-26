@@ -60,3 +60,6 @@ class Logger:
 
     def error(self, content: str):  # red
         self.__print_function__(content, self.__colors.red)
+
+
+logger = Logger()

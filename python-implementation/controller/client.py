@@ -1,13 +1,12 @@
-import json
 from typing import List
-from .models import Config, InstanceSchema
-from .utils import attr_guard, save_file, slugify
+
+from .filesystem import filesystem as fs
 from .key_pair import KeyPair
-from .logger import Logger
+from .logger import logger
+from .models import Config, InstanceSchema
 
-console = Logger()
 
-class Client():
+class InstanceManager():
     boto3_client = None
     config: Config = None
     key_pair: KeyPair = None
@@ -17,61 +16,101 @@ class Client():
         self.config = config
         self._debug = debug
         self.instances: List[InstanceSchema] = []
+        self.imageIds: List[str] = []
 
+    def wait_until_running(self, InstanceIds: List[str]):
+        # https://stackoverflow.com/a/47226579
+        logger.log(f'Waiting for instance(s) to run: {InstanceIds}')
+        client = self.boto3_client
+        waiter = client.get_waiter('instance_running')
+        waiter.wait(InstanceIds=InstanceIds)
 
-    @attr_guard('key_pair')
-    def create_instance(self, UserData: str = '') -> InstanceSchema:
+    def create_image(self, InstanceId: str, ImageName: str):
+        client = self.boto3_client
+
+        self.wait_until_running(InstanceIds=[InstanceId])
+
+        logger.log(f"Creating image '{ImageName}' " +
+                   f"from instace with id '{InstanceId}'")
+
+        waiter = client.get_waiter('image_available')
+
+        image = client.create_image(InstanceId=InstanceId,
+                                    NoReboot=True, Name=ImageName)
+        imageId = image["ImageId"]
+
+        waiter.wait(ImageIds=[imageId])
+
+        self.imageIds.append(imageId)
+        return imageId
+
+    def delete_image(self, ImageId: str):
+        try:
+            self.boto3_client.deregister_image(ImageId=ImageId)
+        except Exception as e:
+            print(e)
+
+    def create_instance(self, GroupId: str, KeyName: str, UserData: str = '') -> InstanceSchema:
         instance_config = self.config.instance_config.dict()
-        console.info("Creating Instance")
+        logger.info("Creating Instance")
+
         response = self.boto3_client.run_instances(
             **instance_config,
-            KeyName=self.key_pair.KeyName,
-            # security group = default
+            KeyName=KeyName,
+            SecurityGroupIds=[GroupId],
             UserData=UserData,
-            DryRun=self._debug
-        )
-        instance = InstanceSchema(**response['Instances'][0], ReservationId=response["ReservationId"])
-        save_file('instance_response.json', json.dumps(instance.dict(), indent=2, default=str), ephemeral=True)
+            DryRun=self._debug,
+            TagSpecifications=[{"ResourceType": "instance",
+                                "Tags": [{
+                                    "Key": "CreatedBy",
+                                    "Value": "cicerotcv-boto3"
+                                }]}])
+        instance = InstanceSchema(**response['Instances'][0],
+                                  ReservationId=response["ReservationId"])
+        logger.success(
+            f"Instance {instance.InstanceType} '{instance.InstanceId}' created.")
+        fs.save_file('instance_response.json',
+                     content=instance.dict(), tmp=True)
         self.instances.append(instance)
         return instance
 
+    def fetch(self):
+        filters = [{'Name': 'tag:CreatedBy', 'Values': ["cicerotcv-boto3"]}]
+        response = self.boto3_client.describe_instances(Filters=filters)
+
+        reservationIds = [i.ReservationId for i in self.instances]
+
+        allocated_reservations = [reservation for reservation in response['Reservations']
+                                  if reservation["ReservationId"] in reservationIds]
+
+        instances: List[InstanceSchema] = []
+
+        for reservation in allocated_reservations:
+            instances += [InstanceSchema(**instance)
+                          for instance in reservation["Instances"]]
+
+        return instances
+
+    def refresh(self, data: List[InstanceSchema] = None):
+        if not data:
+            data = self.fetch()
+        for instance in self.instances:
+            for fresh_data in data:
+                if instance.InstanceId == fresh_data.InstanceId:
+                    instance.State = fresh_data.State
+                    instance.PublicIpAddress = fresh_data.PublicIpAddress
 
     def describe_instances(self):
-        response = self.boto3_client.describe_instances()
-        save_file('instance_description.json', json.dumps(response, indent=2, default=str), ephemeral=True)
-        reservationIds = [instance.ReservationId for instance in self.instances]
-        allocated_reservations = [ reservation for reservation in response['Reservations'] 
-                                   if reservation["ReservationId"] in reservationIds ]
-        instances:List[InstanceSchema] = []
-        for reservation in allocated_reservations:
-            instances += [ InstanceSchema(**instance) for instance in reservation["Instances"]]
-        
-        for instance in instances:
-            print()
-            console.log(f'  InstanceId: {instance.InstanceId} => {instance.State.Name}')
-            if (instance.PublicIpAddress):
-                console.log(f"  $ ssh -i ./tmp/{instance.KeyName}.key ubuntu@{instance.PublicIpAddress}")
-
+        self.refresh()
+        # fs.save_file('instance_description.json', response, tmp=True)
+        return self.instances
 
     def terminate_instances(self):
         try:
             instanceIds = [instance.InstanceId for instance in self.instances]
-            console.info(f"Terminating instances: {instanceIds}")
-            response = self.boto3_client.terminate_instances(InstanceIds=instanceIds)
-            save_file('terminating_instance.json', json.dumps(response, indent=2, default=str), ephemeral=True)
+            logger.info(f"Terminating instances: {instanceIds}")
+            response = self.boto3_client.terminate_instances(
+                InstanceIds=instanceIds)
+            fs.save_file('termianting_instance.json', response, tmp=True)
         except Exception as e:
-            console.error(e)
-
-
-    def create_key_pair(self, KeyName: str):
-        KeyName = slugify(KeyName)
-
-        key_pair = KeyPair(KeyName=KeyName, client=self.boto3_client, debug=self._debug)
-
-        if key_pair.exists():
-            key_pair.delete()
-
-        key_pair.create()
-
-        self.key_pair = key_pair
-        return self.key_pair
+            logger.error(e)

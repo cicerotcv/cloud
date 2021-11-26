@@ -1,6 +1,6 @@
-from typing import List
-from pydantic import BaseModel
 from enum import Enum
+
+from pydantic import BaseModel
 
 
 class InstanceTypeOptions(str, Enum):
@@ -9,20 +9,15 @@ class InstanceTypeOptions(str, Enum):
 
 
 class RegionNameOptions(str, Enum):
-    US_EAST_1 = "us-east-1"  # US East (Ohio)
-    US_EAST_2 = "us-east-2"  # US East (N. Virginia)
-    US_WEST_1 = "us-west-1"  # US West (N. California)
-    US_WEST_2 = "us-west-2"  # US West (Oregon)
-    # add more options here
-
-
-class ImageIdOptions(str, Enum):
-    UBUNTU_1804 = "ami-0279c3b3186e54acd"  # (64-bit x86)
+    N_VIRGINIA = "us-east-1"  # US East (N. Virginia)
+    OHIO = "us-east-2"  # US East (Ohio)
+    N_CALIFORNIA = "us-west-1"  # US West (N. California)
+    OREGON = "us-west-2"  # US West (Oregon)
     # add more options here
 
 
 class InstanceConfig(BaseModel):
-    ImageId: ImageIdOptions
+    ImageId: str
     MinCount: int
     MaxCount: int
     InstanceType: str
@@ -34,12 +29,12 @@ class InstanceConfig(BaseModel):
 class Config(BaseModel):
     client_type: str
     region_name: RegionNameOptions
-    instance_config: InstanceConfig
+    instance_config: InstanceConfig = None
 
 
 class StateSchema(BaseModel):
     Code: int
-    Name: str 
+    Name: str
 
 
 class InstanceSchema(BaseModel):
@@ -49,3 +44,8 @@ class InstanceSchema(BaseModel):
     InstanceType: InstanceTypeOptions
     KeyName: str
     State: StateSchema = None
+
+
+class TagSchema(BaseModel):
+    Key: str
+    Value: str

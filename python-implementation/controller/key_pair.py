@@ -1,8 +1,9 @@
 import json
-import os
 from typing import Any
+
+from .filesystem import filesystem as fs
 from .logger import Logger
-from .utils import attr_guard, client_guard, file_exists, save_file
+from .utils import attr_guard, client_guard, random_str
 
 console = Logger()
 
@@ -22,8 +23,10 @@ class KeyPair():
         return str(json.dumps({key: value for key, value in self.__dict__.items() if not key.startswith('_')}))
 
     @client_guard
-    @attr_guard('KeyName')
     def create(self):
+        if self.exists():
+            self.delete()
+
         content = self._client.create_key_pair(KeyName=self.KeyName, DryRun=self._debug)
 
         self.KeyName = content['KeyName']
@@ -34,13 +37,13 @@ class KeyPair():
         console.success(f"KeyPair '{self.KeyName}' with KeyPairId='{self.KeyPairId}' created.")
 
         # local variable
-        KeyMaterial = content["KeyMaterial"]
+        KeyMaterial: str = content["KeyMaterial"]
 
         del content['ResponseMetadata']
         del content["KeyMaterial"]
 
-        save_file(f"{self.KeyName}.key", KeyMaterial, ephemeral=True)
-        save_file(f"{self.KeyName}.key.json", content=json.dumps(content, indent=2), ephemeral=True)
+        fs.save_file(f'{self.KeyName}.key', KeyMaterial, tmp=True)
+        fs.save_file(f'{self.KeyName}.key.json', KeyMaterial, tmp=True)
 
         return content
 
@@ -51,12 +54,7 @@ class KeyPair():
         KeyPairs = response["KeyPairs"]
         for key in KeyPairs:
             if key["KeyName"] == self.KeyName:
-                if not file_exists(f'{self.KeyName}.key'):
-                    # key exists and you don't have the secret
-                    console.error(f"KeyPair with name {self.KeyName} already exists and you don't have the private piece.")
-                    return True
-                # key exist and you have the secret.
-                console.warn(f"KeyPair with name {self.KeyName} already exists and you have the private piece.")
+                console.warn(f"KeyPair with name '{self.KeyName}' already exists.")
                 return True
         return False
 
@@ -64,15 +62,7 @@ class KeyPair():
     @attr_guard('KeyName')
     def delete(self):
         response = self._client.delete_key_pair(KeyName=self.KeyName, DryRun=self._debug)
-
-        # delete_file(f"{self.KeyName}.key")
-        # delete_file(f"{self.KeyName}.key.json")
-
-        console.success(
-            f"KeyPair '{self.KeyName}' deleted.")
-
-        # self.__dict__ = {}
-
+        console.success(f"KeyPair '{self.KeyName}' deleted.")
         return response
 
     @client_guard
@@ -81,7 +71,8 @@ class KeyPair():
         response = self._client.describe_key_pairs(DryRun=self._debug)
         KeyPairs = response["KeyPairs"]
 
-        this_key = [key_pair for key_pair in KeyPairs if key_pair["KeyPairId"] == self.KeyPairId]
+        this_key = [
+            key_pair for key_pair in KeyPairs if key_pair["KeyPairId"] == self.KeyPairId]
 
         dumped = json.dumps(this_key, indent=2)
         console.info(f'\n{dumped}\n')

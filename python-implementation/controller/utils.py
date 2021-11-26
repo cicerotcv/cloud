@@ -1,4 +1,3 @@
-import json
 import os
 import random
 import re
@@ -10,14 +9,8 @@ from typing import Callable, List
 
 from botocore import exceptions
 
-from .logger import Logger
-
-console = Logger()
-
-ephemerals = []
-
-TMP_DIR = 'tmp'
-TMP_PREFIX = f'./{TMP_DIR}/'
+from .logger import logger
+from .models import InstanceSchema
 
 
 def hide(string: str, digits: int = 10) -> str:
@@ -27,48 +20,7 @@ def hide(string: str, digits: int = 10) -> str:
 def ensure_dir_exists(relative_path: str) -> None:
     if not os.path.exists(relative_path):
         os.makedirs(relative_path)
-        console.warn(f"Path '{relative_path}' created.")
-
-
-def file_exists(file: str) -> bool:
-    return os.path.exists(f'{TMP_PREFIX}{file}')
-
-
-def load_file(filename: str) -> str:
-    with open(filename, mode='r', encoding='utf-8') as file:
-        content = file.read()
-        return content
-
-
-def from_json(filename: str) -> dict:
-    content = load_file(filename)
-    as_json = json.loads(content)
-    return as_json
-
-
-def save_file(filename: str, content: str, mode: str = 'w+', ephemeral=False) -> None:
-    if ephemeral:
-        ephemerals.append(filename)
-    ensure_dir_exists(TMP_DIR)
-    filename = f"{TMP_PREFIX}{filename}"
-    console.warn(f'Created temporary file at {filename}')
-    with open(filename, mode=mode, encoding='utf-8') as file:
-        file.write(content)
-
-
-def delete_file(filename: str) -> None:
-    try:
-        if os.path.exists(f'{TMP_DIR}'):
-            filename = f'{TMP_PREFIX}{filename}'
-        os.remove(filename)
-    except FileNotFoundError as e:
-        console.warn(f"File '{filename}' not found. Probably deleted or moved")
-
-
-def wipe_files():
-    for filename in ephemerals:
-        console.success(f"Deleting file at '{TMP_PREFIX}{filename}'")
-        delete_file(filename)
+        logger.warn(f"Path '{relative_path}' created.")
 
 
 def random_str(length: int = 6) -> str:
@@ -92,22 +44,44 @@ def slugify(value: str) -> str:
     return re.sub('[-\s]+', '-', value).strip('-')
 
 
+def all_ready(instances: List[InstanceSchema]):
+    def is_running(i): return i.State.Name == "running"
+    return all([is_running(instance) for instance in instances])
+
+
+def all_terminated(instances: List[InstanceSchema]):
+    def is_terminated(i): return i.State.Name == "terminated"
+    return all([is_terminated(instance) for instance in instances])
+
+
+def print_status(instance: InstanceSchema, indent: int = 2):
+    spaces = ' '*indent
+    logger.log(f'{spaces}{instance.InstanceId} => {instance.State.Name}')
+
+
+def print_public_ip(instance: InstanceSchema, indent: int = 2):
+    spaces = ' '*indent
+    if (instance.PublicIpAddress):
+        logger.log(f'{spaces}$ ssh -i ./tmp/{instance.KeyName}.key ubuntu@{instance.PublicIpAddress}')
+
+
+def replace(file: str, credentials: dict):
+    for (key, value) in credentials.items():
+        key = "{" + key + "}"
+        file = file.replace(f'${key}', str(value))
+    return file
+
+
 def full_stack() -> str:
     exc = sys.exc_info()[0]
 
     stack = traceback.extract_stack()[:-1]
-
-    # if exc is not None:
-    #     del stack[-1]
 
     trc = '\nTraceback (most recent call last):\n'
     stacklist = traceback.format_list(stack)
     del stacklist[-1]
 
     stackstr = trc + ''.join(stacklist)
-
-    # if exc is not None:
-    #     stackstr += '  ' + traceback.format_exc().lstrip(trc)
 
     return stackstr
 
@@ -121,11 +95,11 @@ def attr_guard(*attrs: List[str]) -> Callable:
             if len(null_attrs) == 0:
                 return function(*args, **kwargs)
             stack = full_stack()
-            console.error(stack)
-            console.error(
+            logger.error(stack)
+            logger.error(
                 f"Error calling {self.__class__.__name__}.{function.__name__}")
             to_be = 'is' if len(null_attrs) == 1 else 'are'
-            console.error(f"{', '.join(null_attrs)} {to_be} None")
+            logger.error(f"{', '.join(null_attrs)} {to_be} None")
             exit(1)
         return wrapper
     return decorator
@@ -144,9 +118,9 @@ def client_guard(class_method: Callable):
             code = error["Code"]
             message = error["Message"]
 
-            console.error(stack)
-            console.error(
+            logger.error(stack)
+            logger.error(
                 f"Error calling {self.__class__.__name__}.{class_method.__name__}")
-            console.info(f"{operation} {code} {message}")
+            logger.info(f"{operation} {code} {message}")
             exit(1)
     return wrapper

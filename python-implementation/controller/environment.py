@@ -1,9 +1,8 @@
 from dotenv import dotenv_values
 from pydantic import BaseModel, Field, error_wrappers
-from .logger import Logger
-from .utils import hide
 
-console = Logger()
+from .logger import logger
+from .utils import hide
 
 
 class CustomBaseModel(BaseModel):
@@ -28,7 +27,7 @@ class Secret(CustomBaseModel):
             for error in e.errors():
                 reason = error['loc'][0]
                 message = error['msg']
-                console.error(f'{reason}: {message}')
+                logger.error(f'{reason}: {message}')
 
             exit(1)
 
@@ -38,22 +37,3 @@ class Secret(CustomBaseModel):
 
     def __repr__(self) -> str:
         return f"Secret({self.__str__()})"
-
-
-class Environment(CustomBaseModel):
-    secret: Secret
-    settings: Settings
-
-    def __init__(self, environment_path: str):
-        data = dict(dotenv_values(environment_path))
-        settings = Settings(**data)
-        secret = Secret(**data, environment_path=environment_path)
-        super().__init__(secret=secret, settings=settings)
-
-
-# if __name__ == "__main__":
-#     env = Environment()
-#     print(env.dict())
-#     print(env.secret)
-#     print(env.secret.aws_access_key_id)
-#     print(env.config)

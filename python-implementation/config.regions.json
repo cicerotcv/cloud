@@ -1,0 +1,14 @@
+{
+  "n_virginia": {
+    "region_name": "us-east-1"
+  },
+  "ohio": {
+    "region_name": "us-east-2"
+  },
+  "n_california": {
+    "region_name": "us-west-1"
+  },
+  "oregon": {
+    "region_name": "us-west-2"
+  }
+}

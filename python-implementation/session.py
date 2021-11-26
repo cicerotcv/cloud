@@ -1,88 +1,59 @@
 # -*- encoding utf-8 -*-
 from time import sleep
-from typing import Dict
 
-import boto3
+from dotenv import dotenv_values
 
-from controller.environment import Secret
-from controller.logger import Logger
-from controller.models import Config
-from controller.client import Client
-from controller.utils import attr_guard, from_json
-from controller.utils import load_file, random_str, slugify, ephemerals, wipe_files
-
-console = Logger()
-
-
-class Session():
-    # instances: List[str] = None
-    _secret: Secret = None
-    _config: Dict[str, Config] = None
-    _clients: Dict[str, Client] = {}
-
-    def __init__(self):
-        self._secret = Secret('.env')
-        self._config = {key: Config(**value)
-                        for key, value in from_json('config.json').items()}
-
-    def load_client(self, config_model: str):
-        try:
-            config = self._config[config_model]
-        except KeyError:
-            console.error(
-                f"Config model '{config_model}' doesn't exist in config.json")
-            exit(1)
-
-        client = boto3.client(config.client_type,
-                              region_name=config.region_name,
-                              **self._secret.dict())
-
-        custom_client = Client(client, config)
-        self._clients[config_model] = custom_client
-        return custom_client
-
-    # def create_security_group(self):
-    #     pass
-
-    # def create_instance(self):
-    #     pass
-
-    # def create_iam(self):
-    #     pass
-
-    def wipe(self):
-        for client_name, client in self._clients.items():
-            console.info(f"Wiping client with name '{client_name}'")
-            client.terminate_instances()
-            client.key_pair.delete()
-
-
-class ContextManager():
-    def __init__(self):
-        self.session = Session()
-
-    def __enter__(self):
-        return self.session
-
-    def __exit__(self, type, value, traceback):
-        console.success("Successfully exiting context manager")
-        self.session.wipe()
-        wipe_files()
-        return type is KeyboardInterrupt
+from controller.filesystem import filesystem as fs
+from controller.utils import print_status, print_public_ip, replace
+from controller.context_manager import ContextManager
 
 
 if __name__ == "__main__":
-
     with ContextManager() as session:
+        credentials = dotenv_values()
 
-        webserver = session.load_client('webserver')
-        key_pair = webserver.create_key_pair('webserver')
+        ohio = session.load_region('ohio')
 
-        ec2_instance = webserver.create_instance()
+        o_kp = ohio.create_key_pair('o-kp')
+        o_sg = ohio.init_security_group('o-sg', "::Ohio::")
+
+        o_sg.enable_ingress('ssh', 'http', 'mongodb')
+        o_sg.enable_egress('http', 'software_update')
+        o_sg.create()
+
+        ohio_manager = ohio.init_client('ohio')
+
+        db_initializer = replace(fs.read('db_install.sh'), credentials)
+
+        database = ohio.create_instance(db_initializer)
+
+        n_virginia = session.load_region('n_virginia')
+
+        # creating key pair
+        nv_kp = n_virginia.create_key_pair('nv-kp')
+
+        # creating security group in North Virginia
+        nv_sg = n_virginia.init_security_group("nv-sg", "::North Virginia::")
+        nv_sg.enable_ingress('ssh', 'http')
+        nv_sg.enable_egress('http', 'software_update')
+        nv_sg.create()
+
+        north_virginia = n_virginia.init_client('north-virginia')
+        ws_initializer = replace(fs.read('setup_server.sh'), credentials)
+
+        webserver = n_virginia.create_instance(ws_initializer)
+
+        # north_virginia.create_image(webserver.InstanceId, "ami-webserver")
+
+        north_virginia.wait_until_running(InstanceIds=[webserver.InstanceId])
+        ohio_manager.wait_until_running(InstanceIds=[database.InstanceId])
+
+        ohio_manager.refresh()
+        north_virginia.refresh()
 
         while True:
-            print()
-            webserver.describe_instances()
-            print()
-            console.info("Waiting for KeyboardInterrupt to exit")
+            instances = ohio.get_instances() + n_virginia.get_instances()
+            for instance in instances:
+                print_status(instance)
+                print_public_ip(instance)
             sleep(30)

@@ -1,0 +1,20 @@
+{
+  "north-virginia": {
+    "client_type": "ec2",
+    "instance_config": {
+      "ImageId": "ami-0279c3b3186e54acd",
+      "MinCount": 1,
+      "MaxCount": 1,
+      "InstanceType": "t2.micro"
+    }
+  },
+  "ohio": {
+    "client_type": "ec2",
+    "instance_config": {
+      "ImageId": "ami-020db2c14939a8efb",
+      "MinCount": 1,
+      "MaxCount": 1,
+      "InstanceType": "t2.micro"
+    }
+  }
+}
