@@ -39,10 +39,10 @@ class StateSchema(BaseModel):
 
 class InstanceSchema(BaseModel):
     InstanceId: str
-    ReservationId: str = None
-    PublicIpAddress: str = None
     InstanceType: InstanceTypeOptions
     KeyName: str
+    ReservationId: str = None
+    PublicIpAddress: str = None
     State: StateSchema = None
 
 

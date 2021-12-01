@@ -1,17 +1,19 @@
-from time import sleep
 
 import boto3
 
+from .auto_scaling import AutoScaling
 from .client import InstanceManager
+from .constants import CONFIG_CLIENTS_FILENAME
 from .environment import Secret
 from .filesystem import filesystem as fs
 from .key_pair import KeyPair
+from .launch_configuration import LaunchConfiguration
+from .load_balancer import LoadBalancer
 from .logger import logger
+from .machine_image import MachineImage
 from .models import Config, RegionNameOptions
 from .security_groups import SecurityGroup
-from .utils import all_terminated, print_public_ip, print_status
-
-CONFIG_CLIENTS_FILENAME = 'config.clients.json'
+from .utils import make_kp_name, make_sg_description, make_sg_name
 
 
 class Region():
@@ -24,39 +26,72 @@ class Region():
 
     def __init__(self, region_name: RegionNameOptions, secret: Secret) -> None:
         self.secret = secret
-        self.security_group = None
-        self.key_pair = None
         self.client: InstanceManager = None
         self.region_name = region_name
-        self.boto3_client = boto3.client('ec2', **secret.dict(),
-                                         region_name=region_name)
-        self.load_balancers = None
 
-    def create_key_pair(self, KeyName: str):
-        self.key_pair = KeyPair(KeyName=KeyName, client=self.boto3_client)
-        self.key_pair.create()
-        return self.key_pair
+        self.boto3_client = self.__init_boto3()
+        self.key_pair = self.__init_kp()
+        self.security_group = self.__init_sg()
+        self.launch_configuration = self.__init_lc()
+        self.load_balancer = self.__init_lb()
+        self.images = self.__init_ami()
+        self.auto_scaling = self.__init_as()
 
-    def init_security_group(self, group_name: str, description: str):
-        self.security_group = SecurityGroup(self.boto3_client,
-                                            group_name, description)
-        return self.security_group
+    def __init_boto3(self) -> boto3.client:
+        rn = self.region_name
+        secret = self.secret.dict()
+        return boto3.client('ec2', region_name=rn, **secret)
+
+    def __init_kp(self) -> KeyPair:
+        key_name = make_kp_name(self.region_name)
+        return KeyPair(KeyName=key_name, client=self.boto3_client)
+
+    def __init_sg(self) -> SecurityGroup:
+        group_name = make_sg_name(self.region_name)
+        description = make_sg_description(self.region_name)
+        return SecurityGroup(self.boto3_client, group_name, description)
+
+    def __init_lc(self) -> LaunchConfiguration:
+        rn = self.region_name
+        secret = self.secret.dict()
+        return LaunchConfiguration(rn, secret)
+
+    def __init_ami(self) -> MachineImage:
+        client = self.boto3_client
+        return MachineImage(client=client)
+
+    def __init_lb(self) -> LoadBalancer:
+        rn = self.region_name
+        secret = self.secret.dict()
+        return LoadBalancer(rn, secret)
+
+    def __init_as(self) -> AutoScaling:
+        rn = self.region_name
+        secret = self.secret.dict()
+        return AutoScaling(rn, secret)
 
     def init_client(self, client_model):
         models: dict = fs.load_config(CONFIG_CLIENTS_FILENAME)
         params = models.get(client_model)
         config = Config(**params, region_name=self.region_name)
         self.client = InstanceManager(self.boto3_client, config)
+
         return self.client
 
-    def create_instance(self, UserData: str = ''):
+    def create_instance(self, UserData: str = '', wait: bool = False):
         client = self.client
         group = self.security_group
 
         if not client or not group:
             return logger.error('You must first create a security group and load a client model')
 
-        return client.create_instance(group.GroupId, self.key_pair.KeyName, UserData=UserData)
+        instance = client.create_instance(
+            group.GroupId,
+            self.key_pair.KeyName,
+            UserData=UserData,
+            wait=wait)
+
+        return instance
 
     def get_instances(self):
         client = self.client
@@ -64,18 +99,30 @@ class Region():
 
         return my_instances
 
+    def create_image(self, InstanceId: str, ImageName: str) -> str:
+        self.wait_until_running(InstanceIds=[InstanceId])
+        logger.log(f"Creating image '{ImageName}' from '{InstanceId}'")
+        return self.images.create(InstanceId, ImageName)
+
+    def delete_image(self, ImageId: str):
+        logger.log(f"Deregistering image '{ImageId}'")
+        self.images.deregister(ImageId)
+
     def wipe(self):
-        self.client.terminate_instances()
-        logger.log("Waiting for all instances to terminate")
+        logger.info("Wiping AutoScaling")
+        self.auto_scaling.wipe()
+        logger.info("Wiping AMIs")
+        self.images.wipe()
+        logger.info("Wiping LoadBalancers")
+        self.load_balancer.wipe()
+        logger.info("Wiping LaunchConfigurations")
+        self.launch_configuration.wipe()
 
-        done = False
-        while not done:
-            sleep(10)
-            instances = self.get_instances()
-            for instance in instances:
-                print_status(instance)
-                print_public_ip(instance)
-            done = all_terminated(instances)
+        logger.info("Wiping Instances")
+        if self.client:
+            self.client.wipe()
 
+        logger.info("Wiping SecurityGroups")
         self.security_group.delete()
+        logger.info("Wiping KeyPairs")
         self.key_pair.delete()

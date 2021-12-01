@@ -1,5 +1,5 @@
 {
-  "north-virginia": {
+  "nv-webserver": {
     "client_type": "ec2",
     "instance_config": {
       "ImageId": "ami-0279c3b3186e54acd",
@@ -8,7 +8,7 @@
       "InstanceType": "t2.micro"
     }
   },
-  "ohio": {
+  "ohio-database": {
     "client_type": "ec2",
     "instance_config": {
       "ImageId": "ami-020db2c14939a8efb",

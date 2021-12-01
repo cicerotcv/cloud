@@ -2,9 +2,9 @@
 sudo su - ubuntu
 
 HOME="/home/ubuntu/"
-MONGO_ADMIN_USER="${MONGO_ADMIN_USER}"
-MONGO_ADMIN_PWD="${MONGO_ADMIN_PWD}"
-MONGO_ADMIN_DB="${MONGO_ADMIN_DB}"
+MONGO_USER=${MONGO_USER}
+MONGO_PWD=${MONGO_PWD}
+MONGO_DB=${MONGO_DB}
 
 wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
 echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
@@ -21,10 +21,12 @@ const conn = new Mongo();
 const db = conn.getDB('admin');
 
 db.createUser({
-  user: '$MONGO_ADMIN_USER',
-  pwd: '$MONGO_ADMIN_PWD',
+  user: '$MONGO_USER',
+  pwd: '$MONGO_PWD',
   roles: [
-    { role:'userAdminAnyDatabase', db: '$MONGO_ADMIN_DB' }
+    { role:'userAdminAnyDatabase', db: 'admin' },
+    { role:'readWriteAnyDatabase', db: 'admin' },
+    { role:'dbAdminAnyDatabase', db: 'admin' },
   ]
 });
 " > create_admin.js

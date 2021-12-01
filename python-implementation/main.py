@@ -4,57 +4,96 @@ from time import sleep
 from dotenv import dotenv_values
 
 from controller.filesystem import filesystem as fs
+from controller.session import Session
 from controller.utils import print_status, print_public_ip, replace
 from controller.context_manager import ContextManager
+from controller.logger import logger
+
+
+def create_ohio(session: Session, credentials):
+    ohio = session.load_region('ohio')
+    ohio.wipe()
+
+    o_kp = ohio.key_pair
+    o_kp.create()
+
+    o_sg = ohio.security_group
+    o_sg.enable_ingress('ssh', 'http', 'mongodb')
+    o_sg.enable_egress('http', 'software_update')
+    o_sg.create()
+
+    o_instances = ohio.init_client('ohio-database')
+    db_statup_script = replace(fs.read('setup_database.sh'), credentials)
+
+    database = ohio.create_instance(db_statup_script)
+    o_instances.wait_until_running(InstanceIds=[database.InstanceId])
+    o_instances.refresh()
+
+    print_public_ip(database)
+    return database.PublicIpAddress
 
 
 if __name__ == "__main__":
     with ContextManager() as session:
         credentials = dotenv_values()
 
-        ohio = session.load_region('ohio')
+        database_host = create_ohio(session, credentials)
 
-        o_kp = ohio.create_key_pair('o-kp')
-        o_sg = ohio.init_security_group('o-sg', "::Ohio::")
+        # carregar região "North Virginia"
+        n_virginia = session.load_region('n_virginia')
+        n_virginia.wipe()
 
-        o_sg.enable_ingress('ssh', 'http', 'mongodb')
-        o_sg.enable_egress('http', 'software_update')
-        o_sg.create()
+        # criar key pair em north virginia
+        nv_kp = n_virginia.key_pair
+        nv_kp.create()
 
-        ohio_manager = ohio.init_client('ohio')
+        # criar security group em north virginia
+        nv_sg = n_virginia.security_group
+        nv_sg.enable_ingress('ssh', 'http')
+        nv_sg.enable_egress('http', 'software_update')
+        nv_sg.create()
 
-        db_initializer = replace(fs.read('setup_database.sh'), credentials)
+        # iniciliazar o gerenciador de instancias de North Virginia
+        nv_instances = n_virginia.init_client('nv-webserver')
 
-        database = ohio.create_instance(db_initializer)
+        # configurar programa de inicialização de North Virginia (UserData)
+        ws_credentials = {
+            **credentials,
+            "MONGO_HOST": database_host  # ohio_instance.PublicIp
+        }
+        ws_initializer = replace(fs.read('setup_server.sh'), ws_credentials)
 
-        # n_virginia = session.load_region('n_virginia')
+        # criar instancia em NV
+        webserver = n_virginia.create_instance(ws_initializer, wait=True)
 
-        # # creating key pair
-        # nv_kp = n_virginia.create_key_pair('nv-kp')
+        nv_instances.refresh()
+        print_public_ip(webserver)
 
-        # # creating security group in North Virginia
-        # nv_sg = n_virginia.init_security_group("nv-sg", "::North Virginia::")
-        # nv_sg.enable_ingress('ssh', 'http')
-        # nv_sg.enable_egress('http', 'software_update')
-        # nv_sg.create()
+        # criar uma AMI de north virginia
+        nv_ami = n_virginia.images.create(webserver.InstanceId, 'nv-ami')
+        nv_instances.terminate_instances([webserver.InstanceId], wait=True)
 
-        # north_virginia = n_virginia.init_client('north-virginia')
-        # ws_initializer = replace(fs.read('setup_server.sh'), credentials)
+        # criar load balancer + autoscaling
+        # logger.log("Creating launch configuration")
+        nv_lc = n_virginia.launch_configuration
+        nv_lc.create_from_instance(webserver, nv_ami, nv_sg.GroupId, UserData=ws_initializer)
 
-        # webserver = n_virginia.create_instance(ws_initializer)
+        nv_lb = n_virginia.load_balancer
+        nv_lb.create(groupIds=[nv_sg.GroupId])
 
-        # # north_virginia.create_image(webserver.InstanceId, "ami-webserver")
+        # criar auto scaling group
+        nv_as = n_virginia.auto_scaling
+        nv_as.create_auto_scalling(nv_lc.name, nv_lb.name, min_size=2)
 
-        # north_virginia.wait_until_running(InstanceIds=[webserver.InstanceId])
-        ohio_manager.wait_until_running(InstanceIds=[database.InstanceId])
+        # destruir a instância de north virginia
 
-        ohio_manager.refresh()
         # north_virginia.refresh()
 
+        # instances = n_virginia.get_instances()
+        # for instance in instances:
+        # print_status(instance)
+        # print_public_ip(instance)
+
+        logger.log("Waiting for interruption...")
         while True:
-            instances = ohio.get_instances() 
-            # + n_virginia.get_instances()
-            for instance in instances:
-                print_status(instance)
-                print_public_ip(instance)
             sleep(30)
