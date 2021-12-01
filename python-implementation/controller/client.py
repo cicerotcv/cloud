@@ -1,9 +1,13 @@
 from typing import List
 
+from controller.constants import DEFAULT_TAG, DEFAULT_TAG_FILTER
+
 from .filesystem import filesystem as fs
 from .key_pair import KeyPair
 from .logger import logger
 from .models import Config, InstanceSchema
+
+from .machine_image import MachineImage
 
 
 class InstanceManager():
@@ -16,7 +20,6 @@ class InstanceManager():
         self.config = config
         self._debug = debug
         self.instances: List[InstanceSchema] = []
-        self.imageIds: List[str] = []
 
     def wait_until_running(self, InstanceIds: List[str]):
         # https://stackoverflow.com/a/47226579
@@ -24,33 +27,16 @@ class InstanceManager():
         client = self.boto3_client
         waiter = client.get_waiter('instance_running')
         waiter.wait(InstanceIds=InstanceIds)
+        logger.log(f'Instance(s) running: {InstanceIds}')
 
-    def create_image(self, InstanceId: str, ImageName: str):
+    def wait_until_terminated(self, InstanceIds: List[str]):
+        logger.log(f'Waiting for instance(s) to terminate: {InstanceIds}')
         client = self.boto3_client
+        waiter = client.get_waiter('instance_terminated')
+        waiter.wait(InstanceIds=InstanceIds)
+        logger.log(f'Instance(s) terminated: {InstanceIds}')
 
-        self.wait_until_running(InstanceIds=[InstanceId])
-
-        logger.log(f"Creating image '{ImageName}' " +
-                   f"from instace with id '{InstanceId}'")
-
-        waiter = client.get_waiter('image_available')
-
-        image = client.create_image(InstanceId=InstanceId,
-                                    NoReboot=True, Name=ImageName)
-        imageId = image["ImageId"]
-
-        waiter.wait(ImageIds=[imageId])
-
-        self.imageIds.append(imageId)
-        return imageId
-
-    def delete_image(self, ImageId: str):
-        try:
-            self.boto3_client.deregister_image(ImageId=ImageId)
-        except Exception as e:
-            print(e)
-
-    def create_instance(self, GroupId: str, KeyName: str, UserData: str = '') -> InstanceSchema:
+    def create_instance(self, GroupId: str, KeyName: str, UserData: str = '', wait: bool = False) -> InstanceSchema:
         instance_config = self.config.instance_config.dict()
         logger.info("Creating Instance")
 
@@ -61,27 +47,32 @@ class InstanceManager():
             UserData=UserData,
             DryRun=self._debug,
             TagSpecifications=[{"ResourceType": "instance",
-                                "Tags": [{
-                                    "Key": "CreatedBy",
-                                    "Value": "cicerotcv-boto3"
-                                }]}])
-        instance = InstanceSchema(**response['Instances'][0],
-                                  ReservationId=response["ReservationId"])
-        logger.success(
-            f"Instance {instance.InstanceType} '{instance.InstanceId}' created.")
-        fs.save_file('instance_response.json',
-                     content=instance.dict(), tmp=True)
+                                "Tags": [DEFAULT_TAG]}])
+
+        created_instance = response['Instances'][0]
+        instance = InstanceSchema(
+            **created_instance, ReservationId=response["ReservationId"])
+
+        logger.log(f"Instance '{instance.InstanceId}' created")
+
+        if wait:
+            self.wait_until_running(InstanceIds=[instance.InstanceId])
+
+        content = instance.dict()
+        fs.save_file('instance_response.json', content=content, tmp=True)
+
         self.instances.append(instance)
         return instance
 
-    def fetch(self):
-        filters = [{'Name': 'tag:CreatedBy', 'Values': ["cicerotcv-boto3"]}]
+    def get_instances(self):
+        filters = [DEFAULT_TAG_FILTER, {
+            'Name': 'instance-state-name',
+            'Values': ['pending', 'running', 'terminating', 'stopping', 'stopped']
+        }]
         response = self.boto3_client.describe_instances(Filters=filters)
 
-        reservationIds = [i.ReservationId for i in self.instances]
-
-        allocated_reservations = [reservation for reservation in response['Reservations']
-                                  if reservation["ReservationId"] in reservationIds]
+        allocated_reservations = [reservation
+                                  for reservation in response['Reservations']]
 
         instances: List[InstanceSchema] = []
 
@@ -93,7 +84,7 @@ class InstanceManager():
 
     def refresh(self, data: List[InstanceSchema] = None):
         if not data:
-            data = self.fetch()
+            data = self.get_instances()
         for instance in self.instances:
             for fresh_data in data:
                 if instance.InstanceId == fresh_data.InstanceId:
@@ -102,15 +93,22 @@ class InstanceManager():
 
     def describe_instances(self):
         self.refresh()
-        # fs.save_file('instance_description.json', response, tmp=True)
         return self.instances
 
-    def terminate_instances(self):
-        try:
-            instanceIds = [instance.InstanceId for instance in self.instances]
-            logger.info(f"Terminating instances: {instanceIds}")
-            response = self.boto3_client.terminate_instances(
-                InstanceIds=instanceIds)
-            fs.save_file('termianting_instance.json', response, tmp=True)
-        except Exception as e:
-            logger.error(e)
+    def terminate_instances(self, InstanceIds: List[str], wait: bool = False):
+        logger.log(f"Terminating instance(s): {InstanceIds}")
+
+        terminate = self.boto3_client.terminate_instances
+        response = terminate(InstanceIds=InstanceIds)
+
+        if wait:
+            self.wait_until_terminated(InstanceIds)
+
+        return response
+
+    def wipe(self):
+        self.refresh()
+        instances = self.get_instances()
+        instanceIds = [instance.InstanceId for instance in instances]
+        if len(instanceIds):
+            self.terminate_instances(instanceIds, wait=True)

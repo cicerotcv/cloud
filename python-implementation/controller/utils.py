@@ -72,6 +72,31 @@ def replace(file: str, credentials: dict):
     return file
 
 
+def make_kp_name(region_name: str) -> str:
+    return f"key-{region_name}"
+
+
+def make_rule(port: int, CidrIp: str = "0.0.0.0/0"):
+    return {
+        'IpProtocol': 'tcp',
+        'FromPort': port,
+        'ToPort': port,
+        'IpRanges': [{"CidrIp": CidrIp}]
+    }
+
+
+def make_sg_name(region_name: str) -> str:
+    return f'group-{region_name}'
+
+
+def make_sg_description(region_name: str) -> str:
+    return f'::{region_name} Security Group::'
+
+
+def make_availability_zones(region_name: str):
+    return [f'{region_name}{sfx}' for sfx in list('abcd')]
+
+
 def full_stack() -> str:
     exc = sys.exc_info()[0]
 

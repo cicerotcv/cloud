@@ -1,36 +1,7 @@
-import json
 
+from .constants import DEFAULT_TAG, DEFAULT_TAG_FILTER, RULES
 from .filesystem import filesystem as fs
-from .logger import logger as console
-
-
-def make_rule(port: int, CidrIp: str = "0.0.0.0/0"):
-    return {
-        'IpProtocol': 'tcp',
-        'FromPort': port,
-        'ToPort': port,
-        'IpRanges': [{"CidrIp": CidrIp}]
-    }
-
-
-RULES = {
-    'ssh': {
-        'ingress': [make_rule(22)],
-        'egress': []
-    },
-    'http': {
-        'ingress': [make_rule(80), make_rule(8080)],
-        'egress': []
-    },
-    'mongodb': {
-        'ingress': [make_rule(27017)],
-        'egress': []
-    },
-    'software_update': {
-        'ingress': [],
-        'egress': [make_rule(80), make_rule(8080), make_rule(443)]
-    }
-}
+from .logger import logger
 
 
 class SecurityGroup():
@@ -57,74 +28,64 @@ class SecurityGroup():
             self.egress.extend(outbount_rules)
 
     def create(self):
-        console.info(f"Creating Security Group '{self.GroupName}'")
-        
-        if self.exists():
-            self.delete()
+        self.delete_duplicate()
 
+        logger.log(f"Creating Security Group '{self.GroupName}'")
 
         client = self.client
         create = client.create_security_group
-        authorize_ingress = client.authorize_security_group_ingress
-        authorize_egress = client.authorize_security_group_egress
 
         response = create(GroupName=self.GroupName,
-                          Description=self.Description)
+                          Description=self.Description,
+                          TagSpecifications=[{
+                              "ResourceType": "security-group",
+                              "Tags": [DEFAULT_TAG]
+                          }])
 
         self.GroupId = response["GroupId"]
-        console.success(f"SecurityGroup '{self.GroupName}' with GroupId='{self.GroupId}' created.")
+        logger.log(
+            f"  SecurityGroup '{self.GroupName}::{self.GroupId}' created")
 
         fs.save_file('sg-response.json', response, tmp=True)
 
+        self.authorize_ingress()
+        self.authorize_egress()
+
+    def authorize_ingress(self):
         if len(self.ingress) > 0:
+            authorize_ingress = self.client.authorize_security_group_ingress
             authorize_ingress(GroupId=self.GroupId, IpPermissions=self.ingress)
 
+    def authorize_egress(self):
         if len(self.egress) > 0:
+            authorize_egress = self.client.authorize_security_group_egress
             authorize_egress(GroupId=self.GroupId, IpPermissions=self.egress)
 
-    def fetch(self):
+    def get_security_groups(self):
         describe = self.client.describe_security_groups
-        response = describe()
-        groups = response["SecurityGroups"]
+        response = describe(Filters=[DEFAULT_TAG_FILTER])
+        return response.get("SecurityGroups", [])
 
-        for sg in groups:
-            if sg["GroupName"] == self.GroupName:
-                return sg
+    def delete(self, group_id=None):
+        if not group_id:
+            group_id = self.GroupId
+        if group_id:
+            logger.log(f"Deleting SecurityGroup '{group_id}'")
+            self.client.delete_security_group(GroupId=group_id)
+            logger.log(f"  SecurityGroup '{group_id}' deleted.")
 
-    def describe(self):
-        description = self.fetch()
-
-        if description:
-            return console.info(json.dumps(description, indent=2))
-
-        console.warn(f"Group '{self.GroupName}' doesn't exist.")
-
-    def refresh(self):
-        group = self.fetch()
-        if group:
-            self.GroupId = group["GroupId"]
-
-    def delete(self):
-
-        if not self.GroupId:
-            self.refresh()
-
-        if  not self.GroupId:
-            return console.warn(f"Group '{self.GroupName}' doesn't exist.")
-
-        console.info(f"Deleting Security Group '{self.GroupId}'")
-
-        self.client.delete_security_group(GroupId=self.GroupId)
-        console.success(f"SecurityGroup '{self.GroupId}' deleted.")
-        self.GroupId = None
+    def delete_duplicate(self):
+        if self.exists():
+            logger.log(f"SecurityGroup '{self.GroupName}' already exists")
+            self.delete()
 
     def exists(self):
-        self.refresh()
-        group_exists = self.GroupId != None
-        if group_exists:
-            console.warn(f"Security Group with name '{self.GroupName}' already exists.")
-        return group_exists
-
+        security_groups = self.get_security_groups()
+        for group in security_groups:
+            if group["GroupName"] == self.GroupName:
+                self.GroupId = group["GroupId"]
+                return True
+        return False
 
     def wipe(self):
         if self.GroupId:

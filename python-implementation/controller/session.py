@@ -32,22 +32,4 @@ class Session():
 
     def wipe(self):
         for region in self.regions:
-            region.client.terminate_instances()
-
-        done = False
-        while not done:
-            sleep(10)
-
-            instances = []
-            for region in self.regions:
-                instances += region.get_instances()
-
-            for instance in instances:
-                print_status(instance)
-                print_public_ip(instance)
-
-            done = all_terminated(instances)
-
-        for region in self.regions:
-            region.security_group.delete()
-            region.key_pair.delete()
+            region.wipe()
