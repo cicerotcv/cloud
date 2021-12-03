@@ -59,7 +59,7 @@ Em **North Virginia (us-east-1)**, o procedimento é análogo, mas possui mais p
 Depois disso, será exibido terminal o `DNSName` do _Load Balancer_
 e com ele é possível fazer requisições ao servidor.
 
-> **Importante 1**: causar uma interrupção no terminal que executou as etapas acima ocasiona na destruição da infraestrutura construída. Ou seja, o servidor só se mantém disponível enquanto o terminal estiver aberto.
+> **Importante**: causar uma interrupção no terminal que executou as etapas acima ocasiona na destruição da infraestrutura construída. Ou seja, o servidor só se mantém disponível enquanto o terminal estiver aberto.
 
 ### Logs
 
