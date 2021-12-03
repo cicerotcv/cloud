@@ -89,7 +89,6 @@ if __name__ == "__main__":
         credentials = dotenv_values()
 
         database_host = create_ohio(session, credentials)
-        # database_host = '' #
 
         create_north_virginia(session, credentials, database_host)
 

@@ -12,7 +12,7 @@ AUTH_HEADER = 'x-authorization'
 # authentication routes
 CHECK_AUTHORIZATION = '/auth'  # GET
 CREATE_ACCOUNT = '/auth/create-account'  # POST
-DELETE_ACCOUNT = '/auth/delete'  # DELETE
+DELETE_ACCOUNT = '/auth/delete'  # POST
 LOGIN = '/auth/login'  # POST
 
 # tasks routes
@@ -27,9 +27,15 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Interact with AWS LoadBalancer+AutoScaling instances')
     parser.add_argument("-l", "--loadbalancer",
+                        help="Load Balancer DNSName",
                         default='localhost:8080')
     parser.add_argument("-a", "--autorun",
                         action='store_true',
+                        help="Defines if wether the program should run automatically or waits for user input",
+                        default=False)
+    parser.add_argument("-t", "--test",
+                        action='store_true',
+                        help="Defines if wether the program should execute or just test connectivity",
                         default=False)
 
     return parser.parse_args()
@@ -59,6 +65,7 @@ class Requests():
     def test_connection(self):
         url = self.base_url
         response = requests.get(url)
+        logger.log(f"Status Code: {response.status_code}")
         return response.status_code == 200
 
     def check_authorization(self):
@@ -197,6 +204,15 @@ class User():
         print_json(data)
 
 
+def test():
+    req = Requests(base_url=BASE_URL)
+    try:
+        if req.test_connection():
+            logger.log(f"Connection available")
+    except:
+        logger.error(f"Couldn't connect to the server at '{BASE_URL}'.")
+
+
 def main():
     waiter = Waiter(auto=AUTO_RUN)
     user = User()
@@ -280,4 +296,9 @@ if __name__ == "__main__":
 
     BASE_URL = "http://" + args.loadbalancer
     AUTO_RUN = args.autorun
-    print(AUTO_RUN)
+    is_testing = args.test
+
+    if is_testing:
+        test()
+    else:
+        main()
