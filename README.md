@@ -2,10 +2,11 @@
 
 Este projeto pode ser utilizado para automatizar o deploy automaticamente de máquinas Ubuntu no EC2 da Amazon.
 
+> **Importante:** Este projeto depende do repositório **[`https://github.com/cicerotcv/cloud-server`](https://github.com/cicerotcv/cloud-server)**.
+
 ### Instruções de uso
 
-    // to do
-
+    Verifique o README.md em `python-implentation/`
 
 ### Tecnologias utilizadas nesse projeto
 
@@ -15,9 +16,6 @@ Este projeto pode ser utilizado para automatizar o deploy automaticamente de má
 ![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
 ![Shell Script](https://img.shields.io/badge/shell_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
-
-
-
 
 **Tempo investido no desenvolvimento:**
 
