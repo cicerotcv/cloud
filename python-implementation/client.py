@@ -218,9 +218,8 @@ def main():
     user = User()
 
     logger.warn(f"# Criando usuário {user.username}")
-    user.create_account()
-
     waiter.wait()
+    user.create_account()
 
     logger.warn(f"# Verificando se token é válido")
     logger.warn(f"# Token: '{user.requests.auth_header}'")

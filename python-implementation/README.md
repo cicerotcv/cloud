@@ -88,13 +88,26 @@ Para interagir com o servidor, é necessário ter acesso ao `DNSName`.
 Para testar se o Servidor está acessível, execute:
 
 ```sh
-python3 client.py --check
+python3 client.py --loadbalancer $DNSName --test
+```
+
+Se tudo correr bem, a saída deve ser:
+
+```
+Status Code: 200
+Connection available
 ```
 
 Para executar a aplicação `client`, certifique-se de ter instalado as dependências. Após isso, você pode executar:
 
 ```sh
 python3  client.py --loadbalancer $DNSName
+```
+
+Exemplo:
+
+```sh
+python3  client.py --loadbalancer 'lb-us-east-1-1234567890.us-east-1.elb.amazonaws.com'
 ```
 
 Com isso, ele irá executar cada instrução e fazer uma pausa. Pressione `enter` para continuar. Se quiser que o programa execute tudo automaticamente, acrescente a `flag` `--autorun`
