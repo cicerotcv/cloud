@@ -6,7 +6,7 @@ Este projeto pode ser utilizado para automatizar o deploy automaticamente de má
 
 ### Instruções de uso
 
-    Verifique o README.md em `python-implentation/`
+Verifique o README em **[python-implentation/](https://github.com/cicerotcv/cloud/tree/master/python-implementation)**
 
 ### Tecnologias utilizadas nesse projeto
 
