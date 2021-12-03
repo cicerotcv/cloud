@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import re
@@ -62,7 +63,12 @@ def print_status(instance: InstanceSchema, indent: int = 2):
 def print_public_ip(instance: InstanceSchema, indent: int = 2):
     spaces = ' '*indent
     if (instance.PublicIpAddress):
-        logger.log(f'{spaces}$ ssh -i ./tmp/{instance.KeyName}.key ubuntu@{instance.PublicIpAddress}')
+        logger.log(
+            f'{spaces}$ ssh -i ./tmp/{instance.KeyName}.key ubuntu@{instance.PublicIpAddress}')
+
+
+def print_json(dict):
+    print(json.dumps(dict, indent=2, default=str))
 
 
 def replace(file: str, credentials: dict):

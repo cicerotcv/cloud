@@ -1,5 +1,6 @@
 
 import json
+from time import sleep
 from .constants import DEFAULT_TAG
 from .logger import logger
 from botocore import exceptions
@@ -41,7 +42,6 @@ class TargetGroup():
         tgs = self.get_target_groups()
         for tg in tgs:
             if tg['TargetGroupName'] == self.name:
-                print(json.dumps(tg, indent=2, default=str))
                 self.ARN = tg['TargetGroupArn']
                 return True
         return False
@@ -55,8 +55,13 @@ class TargetGroup():
 
     def delete(self, ARN: str):
         logger.log(f"Deleting TargetGroup '{self.name}'")
-        delete = self.client.delete_target_group
-        delete(TargetGroupArn=ARN)
+        while self.exists():
+            sleep(10)
+            delete = self.client.delete_target_group
+            try:
+                delete(TargetGroupArn=ARN)
+            except:
+                pass
         logger.log(f"TargetGroup '{self.name}' deleted")
 
     def destroy_if_exists(self):

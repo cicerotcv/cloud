@@ -91,7 +91,7 @@ if __name__ == "__main__":
         database_host = create_ohio(session, credentials)
         # database_host = '' #
 
-        # create_north_virginia(session, credentials, database_host)
+        create_north_virginia(session, credentials, database_host)
 
         logger.log("Waiting for interruption...")
         while True:
