@@ -1,3 +1,4 @@
+from time import sleep
 from typing import List
 
 import boto3
@@ -53,13 +54,13 @@ class LaunchConfiguration():
 
     def delete_if_exist(self):
         if self.exists():
-            logger.log(f"LaunchConfiguration '{self.name}' already exists")
             self.delete()
 
     def delete(self):
         logger.log(f"Deleting LaunchConfiguration '{self.name}'")
         delete = self.client.delete_launch_configuration
         delete(LaunchConfigurationName=self.name)
+        sleep(10)
         logger.log(f"  LaunchConfiguration '{self.name}' deleted")
 
     def wipe(self):

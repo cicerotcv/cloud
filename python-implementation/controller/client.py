@@ -95,7 +95,7 @@ class InstanceManager():
         self.refresh()
         return self.instances
 
-    def terminate_instances(self, InstanceIds: List[str], wait: bool = False):
+    def terminate_instances(self, InstanceIds: List[str], wait: bool = True):
         logger.log(f"Terminating instance(s): {InstanceIds}")
 
         terminate = self.boto3_client.terminate_instances
@@ -110,5 +110,6 @@ class InstanceManager():
         self.refresh()
         instances = self.get_instances()
         instanceIds = [instance.InstanceId for instance in instances]
+        print(instanceIds)
         if len(instanceIds):
             self.terminate_instances(instanceIds, wait=True)
