@@ -1,6 +1,6 @@
 # Amazon Deploy
 
-Este projeto pode ser utilizado para automatizar o deploy automaticamente de máquinas Ubuntu no EC2 da Amazon.
+Este projeto pode ser utilizado para automatizar o deploy de máquinas Ubuntu no EC2 da Amazon.
 
 > **Importante:** Este projeto depende do repositório **[`https://github.com/cicerotcv/cloud-server`](https://github.com/cicerotcv/cloud-server)**.
 
